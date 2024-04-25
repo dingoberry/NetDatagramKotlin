@@ -18,6 +18,8 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
 
     abstract val sourceIp: InetAddress
 
+    abstract val pseudoHeader: ByteArray
+
     val protocol: Protocol
         get() = when (protocolData.toInt() and 0xFF) {
             6 -> Protocol.TCP
@@ -32,32 +34,51 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             private const val INDEX_TOTAL_LENGTH = 2.toByte()
             private const val INDEX_IDENTIFICATION = 4.toByte()
             private const val INDEX_FLAGS_FRAGMENT_OFFSET = 6.toByte()
-            private const val OFFSET_TIME_TO_LIVE = 8.toByte()
-            private const val OFFSET_PROTOCOL = 9.toByte()
-            private const val OFFSET_HEADER_CHECKSUM = 10.toByte()
-            private const val OFFSET_SOURCE_IP = 12.toByte()
-            private const val OFFSET_DESTINATION_IP = 16.toByte()
+            private const val INDEX_TIME_TO_LIVE = 8.toByte()
+            private const val INDEX_PROTOCOL = 9.toByte()
+            private const val INDEX_HEADER_CHECKSUM = 10.toByte()
+            private const val INDEX_SOURCE_IP = 12.toByte()
+            private const val INDEX_DESTINATION_IP = 16.toByte()
+            private const val INDEX_OPTIONS_PADDING = 20.toByte()
         }
 
-        override val headerLength: Int
+        override val headerLength
             get() = (dataSource[INDEX_IHL.offset].toInt() and 0x0F) * 4
-        override val totalLength: Int
+        override val totalLength
             get() = dataSource.resolve2Bytes(INDEX_TOTAL_LENGTH.offset)
-        override val protocolData: Byte
-            get() = dataSource[OFFSET_PROTOCOL.offset]
+        override val protocolData
+            get() = dataSource[INDEX_PROTOCOL.offset]
         override val destinationIp: InetAddress
             get() = InetAddress.getByAddress(ByteArray(4).apply {
-                System.arraycopy(dataSource, OFFSET_DESTINATION_IP.offset, this, 0, 4)
+                System.arraycopy(dataSource, INDEX_DESTINATION_IP.offset, this, 0, 4)
             })
         override val sourceIp: InetAddress
             get() = InetAddress.getByAddress(ByteArray(4).apply {
-                System.arraycopy(dataSource, OFFSET_SOURCE_IP.offset, this, 0, 4)
+                System.arraycopy(dataSource, INDEX_SOURCE_IP.offset, this, 0, 4)
             })
+        override val pseudoHeader
+            get() = ByteArray(12).apply {
+                dataSource.copyInto(this, 0, INDEX_SOURCE_IP.offset, INDEX_SOURCE_IP.offset + 4)
+                dataSource.copyInto(
+                    this,
+                    4,
+                    INDEX_DESTINATION_IP.offset,
+                    INDEX_DESTINATION_IP.offset + 4
+                )
+                this[9] = protocolData
+                this.update2Bytes(10, totalLength - headerLength)
+            }
 
         val destinationIpInt
-            get() = dataSource.resolve4Bytes(OFFSET_DESTINATION_IP.offset)
+            get() = dataSource.resolve4Bytes(INDEX_DESTINATION_IP.offset)
         val sourceIpInt
-            get() = dataSource.resolve4Bytes(OFFSET_SOURCE_IP.offset)
+            get() = dataSource.resolve4Bytes(INDEX_SOURCE_IP.offset)
+
+        /**
+         * 选项（Options）:  可变长度：可选字段，用于网络测试、安全等目的。
+         * 填充（Padding）:  可变长度：确保IP头部长度是32位字的整数倍。
+         */
+        var optionsPadding by OptionsPadding(dataSource, INDEX_OPTIONS_PADDING.offset, headerLength)
 
         private fun getTypeOfService(mask: Int) =
             (dataSource[INDEX_TYPE_OF_SERVICE.offset].toInt() and mask)
@@ -131,29 +152,18 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
                 else 0
 
         val timeToLive
-            get() = dataSource[OFFSET_TIME_TO_LIVE.offset]
+            get() = dataSource[INDEX_TIME_TO_LIVE.offset]
 
-        val checksum
-            get() = headerLength.let {
-                var sum = 0L
-                val crcIndex = OFFSET_HEADER_CHECKSUM.offset
-                for (i in 0 until it step 2) {
-                    if (i != crcIndex) {
-                        sum += dataSource.resolve2Bytes(i)
-                    }
-                }
+        /**
+         * 头部校验和，Get返回校验合是否准确，Set=true: 设置校验合， 反之清零
+         */
+        var checkSum by CheckSum(
+            dataSource,
+            headerLength,
+            0.toByte().offset,
+            INDEX_HEADER_CHECKSUM.offset
+        )
 
-                var shiftVal: Long
-                while ((sum shr 16).apply {
-                        shiftVal = this
-                    } > 0) {
-                    sum = (sum and 0xFFFF) + shiftVal
-                }
-                (sum.inv() and 0xFFFF).toInt()
-            }
-
-        val isValid
-            get() = checksum == dataSource.resolve2Bytes(OFFSET_HEADER_CHECKSUM.offset)
 
         enum class Precedence(val value: Int) {
             /**
@@ -223,6 +233,23 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             get() = InetAddress.getByAddress(ByteArray(16).apply {
                 System.arraycopy(dataSource, INDEX_SOURCE_IP.offset, this, 0, 16)
             })
+        override val pseudoHeader
+            get() = ByteArray(36).apply {
+                dataSource.copyInto(
+                    this,
+                    0,
+                    INDEX_SOURCE_IP.offset,
+                    INDEX_SOURCE_IP.offset + 16
+                )
+                dataSource.copyInto(
+                    this,
+                    16,
+                    INDEX_DESTINATION_IP.offset,
+                    INDEX_DESTINATION_IP.offset + 16
+                )
+                this[33] = protocolData
+                this.update2Bytes(34, payloadLength)
+            }
 
         val hotLimit
             get() = dataSource[INDEX_HOT_LIMIT.offset]
