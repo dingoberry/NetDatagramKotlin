@@ -8,23 +8,49 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
         TCP, UDP, UNKNOWN
     }
 
-    abstract val headerLength: Int
+    /**
+     * 头部长度
+     */
+    abstract var headerLength: Int
 
-    abstract val totalLength: Int
+    /**
+     * 总长度
+     */
+    abstract var totalLength: Int
 
-    abstract val protocolData: Byte
 
-    abstract val destinationIp: InetAddress
+    internal abstract var protocolData: Byte
 
-    abstract val sourceIp: InetAddress
+    /**
+     * 目标IP地址
+     */
+    abstract var destinationIp: InetAddress
 
+    /**
+     * 源IP地址
+     */
+    abstract var sourceIp: InetAddress
+
+    /**
+     * 伪头部，用于上层协议计算校验合
+     */
     abstract val pseudoHeader: ByteArray
 
-    val protocol: Protocol
+    /**
+     * 协议，支持：UDP or TCP
+     */
+    var protocol: Protocol
         get() = when (protocolData.toInt() and 0xFF) {
             6 -> Protocol.TCP
             17 -> Protocol.UDP
             else -> Protocol.UNKNOWN
+        }
+        set(value) {
+            when (value) {
+                Protocol.TCP -> protocolData = 6
+                Protocol.UDP -> protocolData = 17
+                else -> {}
+            }
         }
 
     class IpV4Header(dataSource: ByteArray, offset: Int) : IpHeader(dataSource, offset) {
@@ -42,20 +68,34 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             private const val INDEX_OPTIONS_PADDING = 20.toByte()
         }
 
-        override val headerLength
+        override var headerLength
             get() = (dataSource[INDEX_IHL.offset].toInt() and 0x0F) * 4
-        override val totalLength
+            set(value) {
+                dataSource[INDEX_IHL.offset] =
+                    ((value / 4) or (dataSource[INDEX_IHL.offset].toInt() and 0xFF)).toByte()
+            }
+        override var totalLength
             get() = dataSource.resolve2Bytes(INDEX_TOTAL_LENGTH.offset)
-        override val protocolData
+            set(value) = dataSource.update2Bytes(INDEX_TOTAL_LENGTH.offset, value)
+        override var protocolData
             get() = dataSource[INDEX_PROTOCOL.offset]
-        override val destinationIp: InetAddress
+            set(value) {
+                dataSource[INDEX_PROTOCOL.offset] = value
+            }
+        override var destinationIp: InetAddress
             get() = InetAddress.getByAddress(ByteArray(4).apply {
                 System.arraycopy(dataSource, INDEX_DESTINATION_IP.offset, this, 0, 4)
             })
-        override val sourceIp: InetAddress
+            set(value) {
+                value.address.copyInto(dataSource, INDEX_DESTINATION_IP.offset)
+            }
+        override var sourceIp: InetAddress
             get() = InetAddress.getByAddress(ByteArray(4).apply {
                 System.arraycopy(dataSource, INDEX_SOURCE_IP.offset, this, 0, 4)
             })
+            set(value) {
+                value.address.copyInto(dataSource, INDEX_SOURCE_IP.offset)
+            }
         override val pseudoHeader
             get() = ByteArray(12).apply {
                 dataSource.copyInto(this, 0, INDEX_SOURCE_IP.offset, INDEX_SOURCE_IP.offset + 4)
@@ -69,10 +109,19 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
                 this.update2Bytes(10, totalLength - headerLength)
             }
 
-        val destinationIpInt
+        /**
+         * 目标IP[Int]
+         */
+        var destinationIpInt
             get() = dataSource.resolve4Bytes(INDEX_DESTINATION_IP.offset)
-        val sourceIpInt
+            set(value) = dataSource.update4Bytes(INDEX_DESTINATION_IP.offset, value)
+
+        /**
+         * 源IP[Int]
+         */
+        var sourceIpInt
             get() = dataSource.resolve4Bytes(INDEX_SOURCE_IP.offset)
+            set(value) = dataSource.update4Bytes(INDEX_SOURCE_IP.offset, value)
 
         /**
          * 选项（Options）:  可变长度：可选字段，用于网络测试、安全等目的。
@@ -94,6 +143,9 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
                 }).toByte()
         }
 
+        /**
+         * 服务类型: 优先级
+         */
         var precedence
             get() = when (getTypeOfService(0b11100000) shr 5) {
                 Precedence.PRIORITY.value -> Precedence.PRIORITY
@@ -110,49 +162,103 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
                         or dataSource[INDEX_TYPE_OF_SERVICE.offset].toInt()).toByte()
             }
 
+        /**
+         * 服务类型: 低延迟
+         */
         var lowDelay: Boolean
             get() = isTypeOfServiceOk(0b00010000)
             set(value) {
                 setTypeOfService(0b00010000, value)
             }
 
+        /**
+         * 服务类型: 高吞吐量
+         */
         var highThroughPut: Boolean
             get() = isTypeOfServiceOk(0b00001000)
             set(value) {
                 setTypeOfService(0b00001000, value)
             }
 
+        /**
+         * 服务类型: 高可靠性
+         */
         var highReliability: Boolean
             get() = isTypeOfServiceOk(0b00000100)
             set(value) {
                 setTypeOfService(0b00000100, value)
             }
 
+        /**
+         * 服务类型: 最低成本
+         */
         var minMonetaryCost: Boolean
             get() = isTypeOfServiceOk(0b00000010)
             set(value) {
                 setTypeOfService(0b00000010, value)
             }
 
-        val identification
+        /**
+         * 标识 (Identification): 用于唯一标识主机发送的每一个数据包
+         */
+        var identification
             get() = dataSource.resolve2Bytes(INDEX_IDENTIFICATION.offset).toUShort()
+            set(value) = dataSource.update2Bytes(INDEX_IDENTIFICATION.offset, value.toInt())
 
-        val allowFragment
+        /**
+         * 标志 (Flags): 用于指示是否允许对 IP 数据报进行分片
+         */
+        var allowFragment
             get() = 0 == (dataSource[INDEX_FLAGS_FRAGMENT_OFFSET.offset].toInt() and 0x40)
+            set(value) {
+                dataSource[INDEX_FLAGS_FRAGMENT_OFFSET.offset].toInt().apply {
+                    dataSource[INDEX_FLAGS_FRAGMENT_OFFSET.offset] =
+                        (this or if (value) 0x40 else 0).toByte()
+                }
+            }
 
-        val moreFragment
+        /**
+         * 标志 (Flags): 用于指示是否还有更多的分片
+         */
+        var moreFragment
             get() = allowFragment && 0 != (dataSource[INDEX_FLAGS_FRAGMENT_OFFSET.offset].toInt() and 0x20)
+            set(value) {
+                if (allowFragment) {
+                    dataSource[INDEX_FLAGS_FRAGMENT_OFFSET.offset] =
+                        (dataSource[INDEX_FLAGS_FRAGMENT_OFFSET.offset].toInt()
+                                or if (value) 0x20 else 0).toByte()
+                }
+            }
 
-        val fragmentOffset
+        /**
+         * 片偏移 (Fragment Offset): 用于分片和重组数据包
+         */
+        var fragmentOffset
             get() =
                 if (moreFragment)
                     INDEX_FLAGS_FRAGMENT_OFFSET.offset.let {
                         (dataSource[it].toInt() shl 8) or (dataSource[it + 1].toInt() and 0xFF) and 0x1FFF
                     }
                 else 0
+            set(value) {
+                if (moreFragment) {
+                    INDEX_FLAGS_FRAGMENT_OFFSET.offset.let {
+                        dataSource[it] =
+                            (value and 0x1F00 shr 8 and dataSource[it].toInt()).toByte()
+                        dataSource[it + 1] =
+                            (value and 0xFF and dataSource[it + 1].toInt()).toByte()
+                    }
+                }
+            }
 
-        val timeToLive
+        /**
+         * 生存时间 (Time To Live, TTL): 指定数据包在网络中可以通过的最大路由器数。
+         */
+        var timeToLive
             get() = dataSource[INDEX_TIME_TO_LIVE.offset]
+            set(value) {
+                dataSource[INDEX_TIME_TO_LIVE.offset] = value
+            }
 
         /**
          * 头部校验和，Get返回校验合是否准确，Set=true: 设置校验合， 反之清零
@@ -219,20 +325,34 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             private const val INDEX_DESTINATION_IP = 24.toByte()
         }
 
-        override val headerLength: Int
+        override var headerLength: Int
             get() = 40
-        override val totalLength: Int
+            set(_) {
+            }
+        override var totalLength: Int
             get() = headerLength + payloadLength
-        override val protocolData: Byte
+            set(value) {
+                payloadLength = value - headerLength
+            }
+        override var protocolData: Byte
             get() = dataSource[INDEX_NEXT_HEADER.offset]
-        override val destinationIp: InetAddress
+            set(value) {
+                dataSource[INDEX_NEXT_HEADER.offset] = value
+            }
+        override var destinationIp: InetAddress
             get() = InetAddress.getByAddress(ByteArray(16).apply {
                 System.arraycopy(dataSource, INDEX_DESTINATION_IP.offset, this, 0, 16)
             })
-        override val sourceIp: InetAddress
+            set(value) {
+                value.address.copyInto(dataSource, INDEX_DESTINATION_IP.offset)
+            }
+        override var sourceIp: InetAddress
             get() = InetAddress.getByAddress(ByteArray(16).apply {
                 System.arraycopy(dataSource, INDEX_SOURCE_IP.offset, this, 0, 16)
             })
+            set(value) {
+                value.address.copyInto(dataSource, INDEX_SOURCE_IP.offset)
+            }
         override val pseudoHeader
             get() = ByteArray(36).apply {
                 dataSource.copyInto(
@@ -251,25 +371,32 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
                 this.update2Bytes(34, payloadLength)
             }
 
-        val hotLimit
-            get() = dataSource[INDEX_HOT_LIMIT.offset]
-
-        val payloadLength
+        /**
+         * 有效载荷长度 (Payload Length): 指定除了标准40字节的IPv6头部之外的数据包部分的长度。
+         */
+        var payloadLength
             get() = dataSource.resolve2Bytes(INDEX_PAYLOAD_LENGTH.offset)
+            set(value) = dataSource.update2Bytes(INDEX_PAYLOAD_LENGTH.offset, value)
 
+        /**
+         * 流量类别 (Traffic Class): 用于区分数据包的优先级和服务质量。
+         */
         var trafficClass
             get() = (dataSource[INDEX_TRAFFIC_CLASS.offset].toInt() and 0x0F shl 4) or
-                    (dataSource[INDEX_FLOW_LABEL.offset].toInt() and 0xF0 shr 4)
+                    (dataSource[INDEX_TRAFFIC_CLASS.offset + 1].toInt() and 0xF0 shr 4)
             set(value) {
                 (value and 0xFF).let {
                     dataSource[INDEX_TRAFFIC_CLASS.offset] =
                         (it shr 4 or dataSource[INDEX_TRAFFIC_CLASS.offset].toInt()).toByte()
-                    dataSource[INDEX_FLOW_LABEL.offset] =
-                        (it shl 4 or dataSource[INDEX_FLOW_LABEL.offset].toInt()).toByte()
+                    dataSource[INDEX_TRAFFIC_CLASS.offset + 1] =
+                        (it shl 4 or dataSource[INDEX_TRAFFIC_CLASS.offset + 1].toInt()).toByte()
                 }
             }
 
-        val dscp
+        /**
+         *  流量类别 (Traffic Class): Differentiated Services Code Point
+         */
+        var dscp
             get() = when (trafficClass shr 2) {
                 DSCP.CS1.value -> DSCP.CS1
                 DSCP.CS2.value -> DSCP.CS2
@@ -278,8 +405,14 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
                 DSCP.EF.value -> DSCP.EF
                 else -> DSCP.DEFAULT
             }
+            set(value) {
+                trafficClass = value.value
+            }
 
-        val af
+        /**
+         *  流量类别 (Traffic Class): 有保证的转发 Differentiated Services Code Point of AF
+         */
+        var af
             get() = when (trafficClass shr 2) {
                 AF.AF11.value -> AF.AF11
                 AF.AF12.value -> AF.AF12
@@ -298,13 +431,43 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
                 AF.AF43.value -> AF.AF43
                 else -> AF.DEFAULT
             }
+            set(value) {
+                trafficClass = value.value
+            }
 
-        val ecn
+        /**
+         * 流量类别 (Traffic Class): 网络拥塞情况
+         */
+        var ecn
             get() = when (trafficClass and 0xF3) {
                 ECN.ECT_0.value -> ECN.ECT_0
                 ECN.ECT_1.value -> ECN.ECT_1
                 ECN.CE.value -> ECN.CE
                 else -> ECN.NOT_ECT
+            }
+            set(value) {
+                trafficClass = value.value
+            }
+
+        /**
+         * 流标签 (Flow Label): 用于标识来自同一源的数据包流，以便于特殊处理。
+         */
+        var flowLabel
+            get() = dataSource[INDEX_FLOW_LABEL.offset].toInt() and 3 shl 16 or dataSource.resolve2Bytes(
+                INDEX_FLOW_LABEL.offset + 1
+            )
+            set(value) {
+                dataSource[INDEX_FLOW_LABEL.offset] = (value and 0x30000 shr 16).toByte()
+                dataSource[INDEX_FLOW_LABEL.offset + 1] = (value and 0xFFFF).toByte()
+            }
+
+        /**
+         * 跳限制 (Hop Limit): 与IPv4中的生存时间（TTL）字段相似，每经过一个路由器该值减一，减至0时数据包被丢弃。
+         */
+        var hotLimit
+            get() = dataSource[INDEX_HOT_LIMIT.offset]
+            set(value) {
+                dataSource[INDEX_HOT_LIMIT.offset] = value
             }
 
         /**
@@ -312,7 +475,7 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
          */
         enum class DSCP(val value: Int) {
             /**
-             * 默认服务，没有特殊的优先级或服务质量要求。
+             * （最佳努力）默认服务，用于普通的数据传输，没有特殊的优先级或服务质量要求。
              */
             DEFAULT(0),
 
@@ -337,13 +500,13 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             CS4(0b100000),
 
             /**
-             * Expedited Forwarding（EF），最高优先级，用于实时音频和视频流等，要求低延迟、低丢包率。
+             * Expedited Forwarding（EF）（加速转发），最高优先级，用于实时音频和视频流等，要求低延迟、低丢包率。
              */
             EF(0b101110)
         }
 
         /**
-         * 服务质量
+         * 有保证的转发: 服务质量
          * AFxy（其中x=1-4，y=1-3）：Assured Forwarding，提供四个类别的服务，每个类别有三个不同的丢包优先级。
          * 例如，AF11（001010）、AF12（001100）、AF13（001110）分别表示第一类别的低、中、高丢包优先级。
          */
@@ -362,7 +525,7 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             /**
              * 不使用显式拥塞通知。
              */
-            NOT_ECT(0b00),
+            NOT_ECT(0),
 
             /**
              *使用显式拥塞通知，但优先级较低。
@@ -384,13 +547,35 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
     companion object {
         private const val INDEX_VERSION_IHL = 0.toByte()
 
+        /**
+         * 解析Header
+         */
         @Throws(DataPacketException::class)
-        fun resolveHeader(dataSource: ByteArray, offset: Int = 0): IpHeader {
-            dataSource.getOrNull(INDEX_VERSION_IHL + offset)?.run {
+        fun resolveHeader(
+            dataSource: ByteArray,
+            offset: Int = 0,
+            newCreationIpV6: Boolean?
+        ): IpHeader {
+            dataSource.getOrNull(INDEX_VERSION_IHL offset offset)?.run {
                 return when (val type = this.toInt() shr 4) {
                     4 -> IpV4Header(dataSource, offset)
                     6 -> IpV6Header(dataSource, offset)
-                    else -> throw DataPacketException("Illegal ip header type=${type}!")
+                    else -> {
+                        newCreationIpV6?.let {
+                            fun applyHeader(version: Int) {
+                                dataSource[INDEX_VERSION_IHL offset offset] =
+                                    (version shl 4).toByte()
+                            }
+
+                            if (it) {
+                                applyHeader(6)
+                                IpV6Header(dataSource, offset)
+                            } else {
+                                applyHeader(4)
+                                IpV4Header(dataSource, offset)
+                            }
+                        } ?: run { throw DataPacketException("Illegal ip header type=${type}!") }
+                    }
                 }
             } ?: run {
                 throw DataPacketException("Bad ip header from offset(${offset})!")

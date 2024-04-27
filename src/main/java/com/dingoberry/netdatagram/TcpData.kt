@@ -143,6 +143,9 @@ class TcpData(private val dataSource: ByteArray, ipHeader: IpHeader, offset: Int
             flags = if (value) 1 else 0
         }
 
+    /**
+     * 校验和（Checksum）: 用于错误检测的校验和
+     */
     var checksum by CheckSum(
         dataSource,
         dataSource.size,

@@ -1,5 +1,7 @@
 package com.dingoberry.netdatagram
 
+
+
 fun ByteArray.update2Bytes(offset: Int, value: Int) = (value and 0xFFFF).let {
     this[offset] = (it shr 8).toByte()
     this[offset + 1] = (it and 0xFF).toByte()

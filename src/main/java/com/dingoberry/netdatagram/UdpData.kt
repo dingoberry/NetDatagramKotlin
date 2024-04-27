@@ -37,6 +37,9 @@ class UdpData(private val dataSource: ByteArray, ipHeader: IpHeader, offset: Int
             dataSource.update2Bytes(INDEX_LENGTH.offset, value)
         }
 
+    /**
+     * 校验和（Checksum）: 用于错误检测
+     */
     var checksum by CheckSum(
         dataSource,
         dataSource.size,

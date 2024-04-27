@@ -2,6 +2,9 @@ package com.dingoberry.netdatagram
 
 import kotlin.reflect.KProperty
 
+/**
+ * 计算校验合
+ */
 internal class CheckSum(
     private val dataSource: ByteArray,
     private val calculateEnd: Int,

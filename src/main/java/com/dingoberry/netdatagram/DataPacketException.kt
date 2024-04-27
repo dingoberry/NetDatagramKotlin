@@ -1,4 +1,6 @@
 package com.dingoberry.netdatagram
 
-class DataPacketException(message: String?) : Exception(message) {
-}
+/**
+ * 数据报异常
+ */
+class DataPacketException(message: String?) : Exception(message)

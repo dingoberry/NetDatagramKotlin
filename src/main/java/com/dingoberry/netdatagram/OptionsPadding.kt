@@ -2,6 +2,9 @@ package com.dingoberry.netdatagram
 
 import kotlin.reflect.KProperty
 
+/**
+ * 可选项+填充
+ */
 internal class OptionsPadding(
     private val dataSource: ByteArray,
     private val offset: Int,
