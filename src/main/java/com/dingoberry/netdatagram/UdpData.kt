@@ -1,32 +1,13 @@
 package com.dingoberry.netdatagram
 
-class UdpData(private val dataSource: ByteArray, ipHeader: IpHeader, offset: Int) :
-    DataOffset(offset) {
+class UdpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offset: Int) :
+    CommonData(dataSource, ipHeader, totalLength, offset, INDEX_CHECKSUM) {
 
     companion object {
-        private const val INDEX_SOURCE_PORT = 0.toByte()
-        private const val INDEX_DESTINATION_PORT = 2.toByte()
         private const val INDEX_LENGTH = 4.toByte()
-        private const val INDEX_CHECKSUM = 8.toByte()
+        private const val INDEX_CHECKSUM = 6.toByte()
     }
 
-    /**
-     * 源端口号（Source Port）: 标识发送端的端口号
-     */
-    var sourcePort
-        get() = dataSource.resolve2Bytes(INDEX_SOURCE_PORT.offset)
-        set(value) {
-            dataSource.update2Bytes(INDEX_SOURCE_PORT.offset, value)
-        }
-
-    /**
-     * 目的端口号（Destination Port）: 标识接收端的端口号
-     */
-    var destinationPort
-        get() = dataSource.resolve2Bytes(INDEX_DESTINATION_PORT.offset)
-        set(value) {
-            dataSource.update2Bytes(INDEX_DESTINATION_PORT.offset, value)
-        }
 
     /**
      * 长度（Length）: 表示UDP头部和数据总共的长度，最小值是8（仅头部，无数据）。
@@ -36,17 +17,6 @@ class UdpData(private val dataSource: ByteArray, ipHeader: IpHeader, offset: Int
         set(value) {
             dataSource.update2Bytes(INDEX_LENGTH.offset, value)
         }
-
-    /**
-     * 校验和（Checksum）: 用于错误检测
-     */
-    var checksum by CheckSum(
-        dataSource,
-        dataSource.size,
-        0.toByte().offset,
-        INDEX_CHECKSUM.offset,
-        ipHeader.pseudoHeader
-    )
 
     /**
      * 数据（DATA）

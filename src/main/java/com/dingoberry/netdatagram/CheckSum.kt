@@ -32,7 +32,7 @@ internal class CheckSum(
             }
 
             fun verify() {
-                if (isHigh) {
+                if (!isHigh) {
                     sum += high.toInt() and 0xFF shl 8
                 }
             }
@@ -45,7 +45,6 @@ internal class CheckSum(
             }
 
             val checkSumValue = dataSource.resolve2Bytes(checkSumIndex)
-
             dataSource.update2Bytes(checkSumIndex, 0)
             for (i in offset until calculateEnd) {
                 calculate(dataSource[i])

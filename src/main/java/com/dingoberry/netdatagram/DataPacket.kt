@@ -28,12 +28,16 @@ class DataPacket(
     val data: Any? = when (ipHeader.protocol) {
         IpHeader.Protocol.UDP -> UdpData(
             mDataSource,
-            ipHeader, ipHeader.headerLength
+            ipHeader,
+            ipHeader.totalLength,
+            ipHeader.headerLength
         )
 
         IpHeader.Protocol.TCP -> TcpData(
             mDataSource,
-            ipHeader, ipHeader.headerLength
+            ipHeader,
+            ipHeader.totalLength,
+            ipHeader.headerLength
         )
 
         else -> null

@@ -270,6 +270,8 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             INDEX_HEADER_CHECKSUM.offset
         )
 
+        val checkSumValue
+            get() = dataSource.resolve2Bytes(INDEX_HEADER_CHECKSUM.offset)
 
         enum class Precedence(val value: Int) {
             /**

@@ -1,10 +1,8 @@
 package com.dingoberry.netdatagram
 
-class TcpData(private val dataSource: ByteArray, ipHeader: IpHeader, offset: Int) :
-    DataOffset(offset) {
+class TcpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offset: Int) :
+    CommonData(dataSource, ipHeader, totalLength, offset, INDEX_CHECKSUM) {
     companion object {
-        private const val INDEX_SOURCE_PORT = 0.toByte()
-        private const val INDEX_DESTINATION_PORT = 2.toByte()
         private const val INDEX_SEQUENCE_NUMBER = 4.toByte()
         private const val INDEX_ACKNOWLEDGEMENT_NUMBER = 8.toByte()
         private const val INDEX_DATA_SET_RESERVED = 12.toByte()
@@ -14,24 +12,6 @@ class TcpData(private val dataSource: ByteArray, ipHeader: IpHeader, offset: Int
         private const val INDEX_URGENT_POINTER = 18.toByte()
         private const val INDEX_OPTIONS_PADDING = 20.toByte()
     }
-
-    /**
-     * 源端口号（Source Port）: 标识发送端的端口号
-     */
-    var sourcePort
-        get() = dataSource.resolve2Bytes(INDEX_SOURCE_PORT.offset)
-        set(value) {
-            dataSource.update2Bytes(INDEX_SOURCE_PORT.offset, value)
-        }
-
-    /**
-     * 目的端口号（Destination Port）: 标识接收端的端口号
-     */
-    var destinationPort
-        get() = dataSource.resolve2Bytes(INDEX_DESTINATION_PORT.offset)
-        set(value) {
-            dataSource.update2Bytes(INDEX_DESTINATION_PORT.offset, value)
-        }
 
     /**
      *序列号（Sequence Number）: 用于数据重组的序列号、初始序列号
@@ -142,17 +122,6 @@ class TcpData(private val dataSource: ByteArray, ipHeader: IpHeader, offset: Int
         set(value) {
             flags = if (value) 1 else 0
         }
-
-    /**
-     * 校验和（Checksum）: 用于错误检测的校验和
-     */
-    var checksum by CheckSum(
-        dataSource,
-        dataSource.size,
-        0.toByte().offset,
-        INDEX_CHECKSUM.offset,
-        ipHeader.pseudoHeader
-    )
 
     /**
      * 窗口大小（Window Size）: 用于流量控制，指示发送方可以发送的数据量
