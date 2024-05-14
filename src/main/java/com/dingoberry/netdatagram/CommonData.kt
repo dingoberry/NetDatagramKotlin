@@ -40,4 +40,9 @@ sealed class CommonData(protected val dataSource: ByteArray, ipHeader: IpHeader,
 
     val checkSumValue
         get() = dataSource.resolve2Bytes(checkSumIndex.offset)
+
+    /**
+     * 头部长度
+     */
+    abstract var headerLength: Int
 }

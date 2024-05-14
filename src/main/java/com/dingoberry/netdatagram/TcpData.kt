@@ -34,7 +34,7 @@ class TcpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offse
     /**
      * 数据偏移（Data Offset）: TCP头部的长度, 32位字。
      */
-    var dataOffset
+    override var headerLength
         get() = dataSource[INDEX_DATA_SET_RESERVED.offset].toInt() and 0xF0 shr 4
         set(value) {
             dataSource[INDEX_DATA_SET_RESERVED.offset] = (value and 0x0F shl 4
@@ -145,15 +145,15 @@ class TcpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offse
      * 选项（Options）:  可变长度：用于各种控制目的，如最大报文段长度（MSS）、窗口扩大因子、时间戳等。选项字段的长度可变，但总长度必须使得整个头部长度是32位的整数倍。
      * 填充（Padding）:  可变长度：确保TCP头部长度是32位的整数倍。
      */
-    var optionsPadding by OptionsPadding(dataSource, INDEX_OPTIONS_PADDING.offset, dataOffset)
+    var optionsPadding by OptionsPadding(dataSource, INDEX_OPTIONS_PADDING.offset, headerLength)
 
     /**
      * 数据（DATA）
      */
     var data
-        get() = dataSource.copyOfRange(0.toByte().offset + dataOffset, dataSource.size)
+        get() = dataSource.copyOfRange(0.toByte().offset + headerLength, dataSource.size)
         set(value) {
-            val dataSize = dataSource.size - 0.toByte().offset - dataOffset
+            val dataSize = dataSource.size - 0.toByte().offset - headerLength
             if (value.size > dataSize) {
                 throw DataPacketException("cannot update data out of valid size($dataSize)!")
             }
@@ -162,6 +162,6 @@ class TcpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offse
                 value
             } else {
                 value.copyOf(dataSize)
-            }).copyInto(dataSource, 0.toByte().offset + dataOffset)
+            }).copyInto(dataSource, 0.toByte().offset + headerLength)
         }
 }

@@ -35,4 +35,8 @@ class UdpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offse
                 value.copyOf(dataSize)
             }).copyInto(dataSource, 0.toByte().offset + length)
         }
+
+    override var headerLength: Int
+        get() = 8
+        set(_) {}
 }
