@@ -1,7 +1,7 @@
 package com.dingoberry.netdatagram
 
-class TcpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offset: Int) :
-    CommonData(dataSource, ipHeader, totalLength, offset, INDEX_CHECKSUM) {
+class TcpData(dataSource: ByteArray, ipHeader: IpHeader, chunkEnd: Int, offset: Int) :
+    CommonData(dataSource, ipHeader, chunkEnd, offset, INDEX_CHECKSUM) {
     companion object {
         private const val INDEX_SEQUENCE_NUMBER = 4.toByte()
         private const val INDEX_ACKNOWLEDGEMENT_NUMBER = 8.toByte()
@@ -35,9 +35,9 @@ class TcpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offse
      * 数据偏移（Data Offset）: TCP头部的长度, 32位字。
      */
     override var headerLength
-        get() = dataSource[INDEX_DATA_SET_RESERVED.offset].toInt() and 0xF0 shr 4
+        get() = (dataSource[INDEX_DATA_SET_RESERVED.offset].toInt() and 0xF0 shr 4) * 4
         set(value) {
-            dataSource[INDEX_DATA_SET_RESERVED.offset] = (value and 0x0F shl 4
+            dataSource[INDEX_DATA_SET_RESERVED.offset] = ((value / 4) and 0x0F shl 4
                     or dataSource[INDEX_DATA_SET_RESERVED.offset].toInt()).toByte()
         }
 
@@ -123,6 +123,30 @@ class TcpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offse
             flags = if (value) 1 else 0
         }
 
+    val flagInfo
+        get() = StringBuilder().apply {
+            fun applyFlags(vararg pair: Pair<Boolean, String>) {
+                pair.forEach {
+                    if (it.first) {
+                        if (this.isNotEmpty()) {
+                            append('|')
+                        }
+                        append(it.second)
+                    }
+                }
+            }
+
+            applyFlags(
+                cwr to "CWR",
+                ece to "ECE",
+                urg to "URG",
+                ack to "ACK",
+                psh to "PSH",
+                rst to "RST",
+                syn to "SYN",
+                fin to "FIN")
+        }.toString()
+
     /**
      * 窗口大小（Window Size）: 用于流量控制，指示发送方可以发送的数据量
      */
@@ -151,7 +175,7 @@ class TcpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offse
      * 数据（DATA）
      */
     var data
-        get() = dataSource.copyOfRange(0.toByte().offset + headerLength, dataSource.size)
+        get() = dataSource.copyOfRange(0.toByte().offset + headerLength, chunkEnd)
         set(value) {
             val dataSize = dataSource.size - 0.toByte().offset - headerLength
             if (value.size > dataSize) {

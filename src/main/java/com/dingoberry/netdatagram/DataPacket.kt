@@ -29,14 +29,14 @@ class DataPacket(
         IpHeader.Protocol.UDP -> UdpData(
             mDataSource,
             ipHeader,
-            ipHeader.totalLength,
+            ipHeader.totalLength + offset,
             ipHeader.headerLength
         )
 
         IpHeader.Protocol.TCP -> TcpData(
             mDataSource,
             ipHeader,
-            ipHeader.totalLength,
+            ipHeader.totalLength + offset,
             ipHeader.headerLength
         )
 

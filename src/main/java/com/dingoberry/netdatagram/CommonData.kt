@@ -1,6 +1,6 @@
 package com.dingoberry.netdatagram
 
-sealed class CommonData(protected val dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int,
+sealed class CommonData(protected val dataSource: ByteArray, ipHeader: IpHeader,protected val chunkEnd: Int,
                         offset: Int, private val checkSumIndex: Byte) :
     DataOffset(offset) {
 
@@ -32,7 +32,7 @@ sealed class CommonData(protected val dataSource: ByteArray, ipHeader: IpHeader,
      */
     var checksum by CheckSum(
         dataSource,
-        totalLength,
+        chunkEnd,
         0.toByte().offset,
         checkSumIndex.offset,
         ipHeader.pseudoHeader

@@ -1,7 +1,7 @@
 package com.dingoberry.netdatagram
 
-class UdpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offset: Int) :
-    CommonData(dataSource, ipHeader, totalLength, offset, INDEX_CHECKSUM) {
+class UdpData(dataSource: ByteArray, ipHeader: IpHeader, chunkEnd: Int, offset: Int) :
+    CommonData(dataSource, ipHeader, chunkEnd, offset, INDEX_CHECKSUM) {
 
     companion object {
         private const val INDEX_LENGTH = 4.toByte()
@@ -22,7 +22,7 @@ class UdpData(dataSource: ByteArray, ipHeader: IpHeader, totalLength: Int, offse
      * 数据（DATA）
      */
     var data
-        get() = dataSource.copyOfRange(0.toByte().offset + length, dataSource.size)
+        get() = dataSource.copyOfRange(0.toByte().offset + length, chunkEnd)
         set(value) {
             val dataSize = dataSource.size - 0.toByte().offset - length
             if (value.size > dataSize) {
