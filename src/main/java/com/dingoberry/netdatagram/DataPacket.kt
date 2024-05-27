@@ -40,6 +40,13 @@ class DataPacket(
             ipHeader.headerLength
         )
 
+        IpHeader.Protocol.ICMP -> IcmpData(
+            mDataSource,
+            ipHeader,
+            ipHeader.totalLength + offset,
+            ipHeader.headerLength
+        )
+
         else -> null
     }
 }

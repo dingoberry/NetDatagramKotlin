@@ -5,7 +5,7 @@ import java.net.InetAddress
 sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOffset(offset) {
 
     enum class Protocol {
-        TCP, UDP, UNKNOWN
+        ICMP, TCP, UDP, UNKNOWN
     }
 
     /**
@@ -37,16 +37,18 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
     abstract val pseudoHeader: ByteArray
 
     /**
-     * 协议，支持：UDP or TCP
+     * 协议，支持：ICMP, UDP or TCP
      */
     var protocol: Protocol
         get() = when (protocolData.toInt() and 0xFF) {
+            1 -> Protocol.ICMP
             6 -> Protocol.TCP
             17 -> Protocol.UDP
             else -> Protocol.UNKNOWN
         }
         set(value) {
             when (value) {
+                Protocol.ICMP -> protocolData = 1
                 Protocol.TCP -> protocolData = 6
                 Protocol.UDP -> protocolData = 17
                 else -> {}
