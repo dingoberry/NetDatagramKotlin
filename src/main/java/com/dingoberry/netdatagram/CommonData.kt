@@ -1,7 +1,9 @@
 package com.dingoberry.netdatagram
 
-sealed class CommonData(protected val dataSource: ByteArray, ipHeader: IpHeader,protected val chunkEnd: Int,
-                        offset: Int, private val checkSumIndex: Byte) :
+sealed class CommonData(
+    protected val dataSource: ByteArray, ipHeader: IpHeader?, protected val chunkEnd: Int,
+    offset: Int, private val checkSumIndex: Byte
+) :
     DataOffset(offset) {
 
     companion object {
@@ -12,7 +14,7 @@ sealed class CommonData(protected val dataSource: ByteArray, ipHeader: IpHeader,
     /**
      * 源端口号（Source Port）: 标识发送端的端口号
      */
-    var sourcePort
+    open var sourcePort
         get() = dataSource.resolve2Bytes(INDEX_SOURCE_PORT.offset)
         set(value) {
             dataSource.update2Bytes(INDEX_SOURCE_PORT.offset, value)
@@ -21,7 +23,7 @@ sealed class CommonData(protected val dataSource: ByteArray, ipHeader: IpHeader,
     /**
      * 目的端口号（Destination Port）: 标识接收端的端口号
      */
-    var destinationPort
+    open var destinationPort
         get() = dataSource.resolve2Bytes(INDEX_DESTINATION_PORT.offset)
         set(value) {
             dataSource.update2Bytes(INDEX_DESTINATION_PORT.offset, value)
@@ -35,7 +37,7 @@ sealed class CommonData(protected val dataSource: ByteArray, ipHeader: IpHeader,
         chunkEnd,
         0.toByte().offset,
         checkSumIndex.offset,
-        ipHeader.pseudoHeader
+        ipHeader?.pseudoHeader
     )
 
     val checkSumValue

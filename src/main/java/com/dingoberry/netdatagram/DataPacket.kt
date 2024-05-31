@@ -42,7 +42,6 @@ class DataPacket(
 
         IpHeader.Protocol.ICMP -> IcmpData(
             mDataSource,
-            ipHeader,
             ipHeader.totalLength + offset,
             ipHeader.headerLength
         )

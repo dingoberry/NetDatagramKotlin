@@ -1,19 +1,45 @@
 package com.dingoberry.netdatagram
 
-class IcmpData(dataSource: ByteArray, ipHeader: IpHeader, chunkEnd: Int, offset: Int) :
-    CommonData(dataSource, ipHeader, chunkEnd, offset, INDEX_CHECKSUM) {
+class IcmpData(dataSource: ByteArray, chunkEnd: Int, offset: Int) :
+    CommonData(dataSource, null, chunkEnd, offset, INDEX_CHECKSUM) {
 
     companion object {
-        private const val INDEX_TYPE = 1.toByte()
-        private const val INDEX_CODE = 2.toByte()
-        private const val INDEX_CHECKSUM = 3.toByte()
-        private const val INDEX_IDENTIFIER = 5.toByte()
-        private const val INDEX_SEQUENCE_NUMBER = 7.toByte()
+        private const val INDEX_TYPE = 0.toByte()
+        private const val INDEX_CODE = 1.toByte()
+        private const val INDEX_CHECKSUM = 2.toByte()
+        private const val INDEX_IDENTIFIER = 4.toByte()
+        private const val INDEX_SEQUENCE_NUMBER = 6.toByte()
     }
 
     override var headerLength
         get() = 16
         set(_) {
+        }
+
+    override var sourcePort
+        get() = 0
+        set(_) {
+        }
+
+    override var destinationPort
+        get() = 0
+        set(_) {
+        }
+
+    /**
+     * 用于标识 ICMP 请求和应答报文之间的关联
+     */
+    var identification
+        get() = dataSource.resolve2Bytes(INDEX_IDENTIFIER.offset).toUShort()
+        set(value) = dataSource.update2Bytes(INDEX_IDENTIFIER.offset, value.toInt())
+
+    /**
+     * 用于标识 ICMP 请求和应答报文之间的顺序
+     */
+    var sequenceNumber
+        get() = dataSource.resolve2Bytes(INDEX_SEQUENCE_NUMBER.offset)
+        set(value) {
+            dataSource.update2Bytes(INDEX_SEQUENCE_NUMBER.offset, value)
         }
 
     /**

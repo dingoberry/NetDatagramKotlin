@@ -38,8 +38,8 @@ internal class CheckSum(
             }
 
             pseudoHeader?.let {
-                it.forEach {
-                    calculate(it)
+                it.forEach { item ->
+                    calculate(item)
                 }
                 verify()
             }
@@ -51,7 +51,6 @@ internal class CheckSum(
             }
             dataSource.update2Bytes(checkSumIndex, checkSumValue)
             verify()
-
 
             while (sum > 0xFFFF) {
                 sum = (sum and 0xFFFF) + (sum shr 16)
