@@ -95,27 +95,39 @@ class IcmpData(dataSource: ByteArray, chunkEnd: Int, offset: Int) :
             TimeExceededReason.NONE
         }
 
-    enum class DataType {
-        TYPE_ECHO_REQUEST,
-        TYPE_ECHO_REPLY,
-        TYPE_DESTINATION_UNREACHABLE,
-        TYPE_TIME_EXCEEDED,
-        TYPE_NONE
+    enum class DataType(val value: String) {
+        TYPE_ECHO_REQUEST("request"),
+        TYPE_ECHO_REPLY("reply"),
+        TYPE_DESTINATION_UNREACHABLE("dest unreachable"),
+        TYPE_TIME_EXCEEDED("time exceeded"),
+        TYPE_NONE("none");
+
+        override fun toString(): String {
+            return value
+        }
     }
 
-    enum class DestinationUnreachableReason {
-        NETWORK_UNREACHABLE,
-        HOST_UNREACHABLE,
-        PROTOCOL_UNREACHABLE,
-        PORT_UNREACHABLE,
-        FRAGMENT_NEEDED_AND_DONT_FRAGMENT_WAS_SET,
-        SOURCE_ROUTE_FAILED,
-        NONE
+    enum class DestinationUnreachableReason(val value: String) {
+        NETWORK_UNREACHABLE("network unreachable"),
+        HOST_UNREACHABLE("host unreachable"),
+        PROTOCOL_UNREACHABLE("protocol unreachable"),
+        PORT_UNREACHABLE("port unreachable"),
+        FRAGMENT_NEEDED_AND_DONT_FRAGMENT_WAS_SET("fragment needed and don't fragment was set"),
+        SOURCE_ROUTE_FAILED("source route failed"),
+        NONE("none");
+
+        override fun toString(): String {
+            return value
+        }
     }
 
-    enum class TimeExceededReason {
-        TIME_TO_LIVE_EXCEEDED_IN_TRANSIT,
-        FRAGMENT_REASSEMBLY_TIME_EXCEEDED,
-        NONE
+    enum class TimeExceededReason(val value: String) {
+        TIME_TO_LIVE_EXCEEDED_IN_TRANSIT("time to live exceeded in transit"),
+        FRAGMENT_REASSEMBLY_TIME_EXCEEDED("fragment reassembly time exceeded"),
+        NONE("none");
+
+        override fun toString(): String {
+            return value
+        }
     }
 }

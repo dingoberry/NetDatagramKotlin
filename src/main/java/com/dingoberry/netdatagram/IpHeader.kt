@@ -5,7 +5,11 @@ import java.net.InetAddress
 sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOffset(offset) {
 
     enum class Protocol {
-        ICMP, TCP, UDP, UNKNOWN
+        ICMP, TCP, UDP, UNKNOWN;
+
+        override fun toString(): String {
+            return name.lowercase()
+        }
     }
 
     /**
@@ -19,7 +23,7 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
     abstract var totalLength: Int
 
 
-    internal abstract var protocolData: Byte
+    abstract var protocolData: Byte
 
     /**
      * 目标IP地址
@@ -314,7 +318,11 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             /**
              * 网络控制（Network Control）
              */
-            NETWORK_CONTROL(0b111)
+            NETWORK_CONTROL(0b111);
+
+            override fun toString(): String {
+                return "${name.lowercase()}<${value.toString(2)}>"
+            }
         }
     }
 
@@ -506,7 +514,11 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             /**
              * Expedited Forwarding（EF）（加速转发），最高优先级，用于实时音频和视频流等，要求低延迟、低丢包率。
              */
-            EF(0b101110)
+            EF(0b101110);
+
+            override fun toString(): String {
+                return if (this == DEFAULT) "" else "${name.lowercase()}:${value.toString(2)}"
+            }
         }
 
         /**
@@ -519,7 +531,11 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             AF11(0b001010), AF12(0b001100), AF13(0b001110),
             AF21(0b010010), AF22(0b010100), AF23(0b010110),
             AF31(0b011010), AF32(0b011100), AF33(0b011110),
-            AF41(0b100010), AF42(0b100100), AF43(0b100110),
+            AF41(0b100010), AF42(0b100100), AF43(0b100110);
+
+            override fun toString(): String {
+                return if (this == DEFAULT) "" else "${name.lowercase()}:${value.toString(2)}"
+            }
         }
 
         /**
@@ -544,7 +560,11 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
             /**
              *表示拥塞已发生，需要采取措施减少拥塞。
              */
-            CE(0b11)
+            CE(0b11);
+
+            override fun toString(): String {
+                return "${name.lowercase()}:${value.toString(2)}"
+            }
         }
     }
 
