@@ -149,6 +149,25 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
                 }).toByte()
         }
 
+        val typeOfService: String
+            get() {
+                val typeName = { condition: Boolean, name: String ->
+                    if (condition) "$name|" else ""
+                }
+
+                return "${typeName(lowDelay, "lowDelay")}${
+                    typeName(
+                        highThroughPut,
+                        "highThroughPut"
+                    )
+                }${typeName(highReliability, "highReliability")}${
+                    typeName(
+                        minMonetaryCost,
+                        "minCost"
+                    )
+                }${precedence}"
+            }
+
         /**
          * 服务类型: 优先级
          */

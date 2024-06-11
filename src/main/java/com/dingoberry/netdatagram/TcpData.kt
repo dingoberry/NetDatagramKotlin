@@ -54,7 +54,7 @@ class TcpData(dataSource: ByteArray, ipHeader: IpHeader, chunkEnd: Int, offset: 
     /**
      * Congestion Window Reduced: 拥塞窗口减小标志位
      */
-    var cwr
+        var cwr
         get() = flags and 0b10000000 != 0
         set(value) {
             flags = if (value) 0b10000000 else 0
