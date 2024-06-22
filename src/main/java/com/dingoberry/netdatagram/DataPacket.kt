@@ -17,6 +17,9 @@ class DataPacket(
 
     private val mDataSource: ByteArray = if (clone) dataSource.clone() else dataSource
 
+    val dataSource
+        get() = mDataSource
+
     /**
      * 传输Header协议
      */

@@ -151,18 +151,18 @@ class TcpData(dataSource: ByteArray, ipHeader: IpHeader, chunkEnd: Int, offset: 
      * 窗口大小（Window Size）: 用于流量控制，指示发送方可以发送的数据量
      */
     var windowSize
-        get() = dataSource.resolve4Bytes(INDEX_WINDOW_SIZE.offset)
+        get() = dataSource.resolve2Bytes(INDEX_WINDOW_SIZE.offset)
         set(value) {
-            dataSource.update4Bytes(INDEX_WINDOW_SIZE.offset, value)
+            dataSource.update2Bytes(INDEX_WINDOW_SIZE.offset, value)
         }
 
     /**
      * 紧急指针（Urgent Pointer）: 仅当URG标志位为1时才有效，指示紧急数据的结束位置
      */
     var urgentPointer
-        get() = dataSource.resolve4Bytes(INDEX_URGENT_POINTER.offset)
+        get() = dataSource.resolve2Bytes(INDEX_URGENT_POINTER.offset)
         set(value) {
-            dataSource.update4Bytes(INDEX_URGENT_POINTER.offset, value)
+            dataSource.update2Bytes(INDEX_URGENT_POINTER.offset, value)
         }
 
     /**
