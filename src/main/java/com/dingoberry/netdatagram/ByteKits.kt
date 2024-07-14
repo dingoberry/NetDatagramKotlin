@@ -9,9 +9,9 @@ fun ByteArray.update2Bytes(offset: Int, value: Int) = (value and 0xFFFF).let {
 
 fun ByteArray.update4Bytes(offset: Int, value: Int) {
     this[offset] = (value shr 24 and 0xFF).toByte()
-    this[offset] = (value shr 16 and 0xFF).toByte()
-    this[offset] = (value shr 8 and 0xFF).toByte()
-    this[offset] = (value and 0xFF).toByte()
+    this[offset + 1] = (value shr 16 and 0xFF).toByte()
+    this[offset + 2] = (value shr 8 and 0xFF).toByte()
+    this[offset + 3] = (value and 0xFF).toByte()
 }
 
 infix fun Byte.int(low: Byte) =

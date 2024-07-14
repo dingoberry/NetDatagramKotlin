@@ -60,15 +60,18 @@ internal class CheckSum(
 
 
     @Throws(DataPacketException::class)
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): Boolean =
-        dataSource.resolve2Bytes(checkSumIndex) == checksum
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): String {
+        val cr = dataSource.resolve2Bytes(checkSumIndex)
+        val ccr = checksum
+        return "${cr == ccr}(${ccr},hex:${ccr.toString(16)})"
+    }
 
     @Throws(DataPacketException::class)
     operator fun setValue(
         thisRef: Any?,
         property: KProperty<*>,
-        checksum: Boolean
+        checksum: String
     ) {
-        dataSource.update2Bytes(checkSumIndex, if (checksum) this.checksum else 0)
+        dataSource.update2Bytes(checkSumIndex, if (checksum.isEmpty()) this.checksum else 0)
     }
 }
