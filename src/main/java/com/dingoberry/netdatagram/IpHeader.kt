@@ -398,8 +398,8 @@ sealed class IpHeader(protected val dataSource: ByteArray, offset: Int) : DataOf
                     INDEX_DESTINATION_IP.offset,
                     INDEX_DESTINATION_IP.offset + 16
                 )
-                this[33] = protocolData
-                this.update2Bytes(34, payloadLength)
+                this.update4Bytes(32, payloadLength)
+                this[35] = protocolData
             }
 
         /**
